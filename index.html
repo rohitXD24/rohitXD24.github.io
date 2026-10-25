@@ -7,8 +7,11 @@
   // Sign-in is one "Continue with Google" button (invideo accounts only; Rohit, 25 Oct: "just connect to google… they just select
   // their email"). It switches itself on: the screen asks Supabase whether Google is turned on there (PUBLISHING-HANDOFF.md) and
   // until it is, shows the email and password form, so nobody lands on Supabase's "provider is not enabled" page
-  let GOOGLE = false
-  const googleOn = fetch(SUPA_URL + '/auth/v1/settings', { headers: { apikey: SUPA_KEY } }).then(r => r.json()).then(s => !!(s.external && s.external.google)).catch(() => false)
+  // Which one-click sign-ins are switched on in Supabase (Google and/or Slack). The email + password form always shows too
+  // (Rohit, 25 Oct: "email and password now are fine"; "Confirm email" is off, so creating an account signs you straight in)
+  let PROV = { google: false, slack: false }
+  const provOn = fetch(SUPA_URL + '/auth/v1/settings', { headers: { apikey: SUPA_KEY } }).then(r => r.json())
+    .then(s => ({ google: !!(s.external && s.external.google), slack: !!(s.external && s.external.slack_oidc) })).catch(() => PROV)
   window.DAILIES_WEB = true
   const W = (window.DAILIES_WEB_API = { email: '' })
   const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } })
@@ -27,7 +30,7 @@
   W.signOut = () => sb.auth.signOut()
 
   async function showGate() {
-    GOOGLE = await googleOn
+    PROV = await provOn
     const mount = () => {
       if (uid || document.getElementById('gate')) return // (signed in while we asked Supabase)
       const g = document.createElement('div')
@@ -53,12 +56,13 @@
       <form class="g-card" autocomplete="on">
         <div class="logo"><img alt="" id="g-mark">dailies</div>
         <p>Your reference library. Save from Instagram, X, YouTube, Pinterest and anywhere else, then find it again in seconds.</p>
-        ${GOOGLE ? `<button type="button" class="google" id="g-google"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg><span>Continue with Google</span></button>
-        <p class="fine">Pick your @invideo.io Google account. New or returning, it's the same button.</p>` : `
+        ${PROV.slack ? `<button type="button" class="google" id="g-slack"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#E01E5A" d="M5.04 15.16a2.52 2.52 0 1 1-2.52-2.52h2.52zm1.27 0a2.52 2.52 0 1 1 5.04 0v6.32a2.52 2.52 0 1 1-5.04 0z"/><path fill="#36C5F0" d="M8.84 5.04a2.52 2.52 0 1 1 2.52-2.52v2.52zm0 1.27a2.52 2.52 0 1 1 0 5.04H2.52a2.52 2.52 0 1 1 0-5.04z"/><path fill="#2EB67D" d="M18.96 8.84a2.52 2.52 0 1 1 2.52 2.52h-2.52zm-1.27 0a2.52 2.52 0 1 1-5.04 0V2.52a2.52 2.52 0 1 1 5.04 0z"/><path fill="#ECB22E" d="M15.16 18.96a2.52 2.52 0 1 1-2.52 2.52v-2.52zm0-1.27a2.52 2.52 0 1 1 0-5.04h6.32a2.52 2.52 0 1 1 0 5.04z"/></svg><span>Continue with Slack</span></button>` : ''}
+        ${PROV.google ? `<button type="button" class="google" id="g-google"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg><span>Continue with Google</span></button>` : ''}
+        ${PROV.slack || PROV.google ? `<p class="or">or with your invideo email</p>` : ''}
         <input type="email" id="g-email" placeholder="you@invideo.io" autocomplete="username" required>
         <input type="password" id="g-pass" placeholder="Password" autocomplete="current-password" minlength="8" required>
         <button type="submit" class="primary" id="g-go">Sign in</button>
-        <button type="button" class="ghost" id="g-mode">New here? Create an account</button>`}
+        <button type="button" class="ghost" id="g-mode">New here? Create an account</button>
         <div class="msg" id="g-msg"></div>
       </form>`
       document.body.appendChild(g)
@@ -66,21 +70,20 @@
       let creating = false
       const $ = s => g.querySelector(s)
       const say = (m, bad) => { $('#g-msg').textContent = m; $('#g-msg').className = 'msg' + (bad ? ' bad' : '') }
-      if (GOOGLE) {
-        // back from Google with a refusal (a non-invideo account, or Cancel): say so in plain words
-        const back = new URLSearchParams(location.hash.slice(1) + '&' + location.search.slice(1))
-        const why = back.get('error_description') || back.get('error')
-        if (why) {
-          say(/database error|invideo/i.test(why) ? 'Dailies is for invideo accounts. Pick your @invideo.io Google account.' : /access_denied|cancel/i.test(why) ? 'Sign-in was cancelled. Try again when you’re ready.' : why, true)
-          history.replaceState(null, '', location.pathname)
-        }
-        $('#g-google').onclick = async () => {
-          $('#g-google').disabled = true; say('Opening Google…')
-          const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin, queryParams: { hd: 'invideo.io', prompt: 'select_account' } } })
-          if (error) { say(error.message, true); $('#g-google').disabled = false }
-        }
-        return
+      // back from Slack or Google with a refusal (a non-invideo account, or Cancel): say so in plain words
+      const back = new URLSearchParams(location.hash.slice(1) + '&' + location.search.slice(1))
+      const why = back.get('error_description') || back.get('error')
+      if (why) {
+        say(/database error|invideo/i.test(why) ? 'Dailies is for invideo accounts. Pick your invideo account.' : /access_denied|cancel/i.test(why) ? 'Sign-in was cancelled. Try again when you’re ready.' : why, true)
+        history.replaceState(null, '', location.pathname)
       }
+      const social = async (btn, provider, queryParams) => {
+        btn.disabled = true; say(provider === 'google' ? 'Opening Google…' : 'Opening Slack…')
+        const { error } = await sb.auth.signInWithOAuth({ provider, options: { redirectTo: location.origin, queryParams } })
+        if (error) { say(error.message, true); btn.disabled = false }
+      }
+      if (PROV.slack) $('#g-slack').onclick = () => social($('#g-slack'), 'slack_oidc')
+      if (PROV.google) $('#g-google').onclick = () => social($('#g-google'), 'google', { hd: 'invideo.io', prompt: 'select_account' })
       $('#g-mode').onclick = () => {
         creating = !creating
         $('#g-go').textContent = creating ? 'Create account' : 'Sign in'
@@ -96,7 +99,7 @@
         try {
           const { data, error } = creating ? await sb.auth.signUp({ email, password }) : await sb.auth.signInWithPassword({ email, password })
           if (error) throw error
-          if (creating && !data.session) say('Almost there: open the confirmation email we just sent, then sign in here.')
+          if (creating && !data.session) say('Almost there: open the confirmation email we just sent, then sign in here.') // only if "Confirm email" is switched back on in Supabase
         } catch (e) {
           const m = String(e.message || e)
           say(/invalid login/i.test(m) ? 'That email and password don’t match. New here? Create an account.'
@@ -2383,7 +2386,7 @@ input, textarea, select, .field { transition: border-color .18s ease, box-shadow
         <div class="dsec-b"><div class="dsec-in"><div class="dproj" id="d-proj"></div></div></div>
       </section>
       <section class="dsec" data-sec="quick" id="d-qwrap" hidden>
-        <div class="dsec-h"><button type="button" class="dsec-t" aria-expanded="true">Quick tags<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="dsec-x" id="d-qhint">keys 1–9</span></div>
+        <div class="dsec-h"><button type="button" class="dsec-t" aria-expanded="true">Quick tags<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="dsec-x" id="d-qhint"></span></div>
         <div class="dsec-b"><div class="dsec-in"></div></div>
       </section>
       <section class="dsec" data-sec="cap" id="d-cap-wrap">
@@ -4104,7 +4107,7 @@ function toast(msg, action) {
   if (action) el.querySelector('button').onclick = () => { action.run(); el.classList.remove('show') }
   el.classList.add('show')
   clearTimeout(toastTimer)
-  toastTimer = setTimeout(() => el.classList.remove('show'), action ? 5000 : 2800)
+  toastTimer = setTimeout(() => el.classList.remove('show'), action ? (action.ms || 5000) : 2800)
 }
 
 // ------------------------------------------------------------------ milestone confetti (the one celebration Rohit kept)
@@ -11426,7 +11429,7 @@ async function deleteRefsBulk(refs, tagToo) {
     if (!S.assets) return
     for (const [, d] of saved) for (const a of [d.image, d.video, d.gif, d.scrub && d.scrub.id]) if (a) S.assets.delete(a).catch(() => {})
   }, 10000)
-  toast(`Deleted ${saved.length} reference${saved.length === 1 ? '' : 's'}${tagToo ? ` and #${tagToo}` : ''}`, { label: 'Undo', run: async () => {
+  toast(`Deleted ${saved.length} reference${saved.length === 1 ? '' : 's'}${tagToo ? ` and #${tagToo}` : ''}`, { label: 'Undo', ms: saved.length >= 10 ? 12000 : 7000, run: async () => {
     clearTimeout(purge)
     rememberRemoved(refs, false)
     for (const [id] of saved) S.gone.delete(id)
