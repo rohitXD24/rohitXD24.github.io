@@ -6834,15 +6834,16 @@ $('#d-delete').onclick = async () => {
   closeTop()
   deleteRef(r)
 }
-// On the website without the extension, references that are still waiting for a picture (saved from a phone, or before the
-// extension was installed) get their title and picture from the server function, a few at a time, in the background
+// On the website, references that are still waiting for a picture get their title and picture from the server function, a
+// few at a time, in the background: every link without the extension (saved from a phone, say), and plain websites with it
+// (the server reads them without anyone's logins; the extension keeps Instagram, Pinterest, X and YouTube)
 const WEBPREV = { asked: new Set(), busy: false, timer: 0 }
 const webPrev = () => !!(window.DAILIES_WEB && window.DAILIES_WEB_API && window.DAILIES_WEB_API.previewUrl) // the website fetches pictures itself
 function webPreviewsSoon() { if (!(window.DAILIES_WEB && S.canWrite)) return; clearTimeout(WEBPREV.timer); WEBPREV.timer = setTimeout(webPreviews, 3000) }
 async function webPreviews() {
   const W = window.DAILIES_WEB_API
-  if (WEBPREV.busy || S.ext || !(W && W.token && W.previewUrl) || document.hidden) return
-  const todo = S.refs.filter(r => r.preview === 'pending' && !r.image && /^https:\/\//i.test(r.url || '') && r.source !== 'instagram' && !WEBPREV.asked.has(r.id)).slice(0, 6)
+  if (WEBPREV.busy || !(W && W.token && W.previewUrl) || document.hidden) return
+  const todo = S.refs.filter(r => r.preview === 'pending' && !r.image && /^https:\/\//i.test(r.url || '') && r.source !== 'instagram' && !(S.ext && PREVIEWABLE.includes(r.source)) && !['note', 'upload'].includes(r.source) && !WEBPREV.asked.has(r.id)).slice(0, 6)
   if (!todo.length) return
   WEBPREV.busy = true
   try {
@@ -7423,7 +7424,7 @@ function requestPreviews() {
   if (!S.inboxOpen || !S.canWrite) return
   measureScreen()
   S.asked = S.asked || new Set()
-  const items = S.refs.filter(r => r.url && !S.asked.has(r.id) && ((r.preview === 'pending' && !r.image && (window.DAILIES_DESKTOP || PREVIEWABLE.includes(r.source) || (siteReady() && !['note', 'upload'].includes(r.source)))) || ((r.source === 'pinterest' || r.source === 'twitter') && (!r.media || (VIDEO_PREVIEWS && r.media !== 'image' && !r.video && !r.gif && needFrames(r)))) || (slidesReady() && (r.source === 'pinterest' || r.source === 'twitter') && !r.sl && r.kind !== 'note') || (pkReady() && r.source === 'pinterest' && !r.pk && /\/pin\/\d+/.test(r.url || '')) || (r.source === 'youtube' && (needFrames(r) || wideShort(r))) || (r.source === 'instagram' && needFrames(r) && !!r.image) || (r.via === 'instagram' && r.image && !r.caption && !r.title) || (VIDEO_PREVIEWS && window.DAILIES_DESKTOP && r.vidWant && !r.video)))
+  const items = S.refs.filter(r => r.url && !S.asked.has(r.id) && ((r.preview === 'pending' && !r.image && (window.DAILIES_DESKTOP || PREVIEWABLE.includes(r.source) || (siteReady() && !window.DAILIES_WEB && !['note', 'upload'].includes(r.source)))) || ((r.source === 'pinterest' || r.source === 'twitter') && (!r.media || (VIDEO_PREVIEWS && r.media !== 'image' && !r.video && !r.gif && needFrames(r)))) || (slidesReady() && (r.source === 'pinterest' || r.source === 'twitter') && !r.sl && r.kind !== 'note') || (pkReady() && r.source === 'pinterest' && !r.pk && /\/pin\/\d+/.test(r.url || '')) || (r.source === 'youtube' && (needFrames(r) || wideShort(r))) || (r.source === 'instagram' && needFrames(r) && !!r.image) || (r.via === 'instagram' && r.image && !r.caption && !r.title) || (VIDEO_PREVIEWS && window.DAILIES_DESKTOP && r.vidWant && !r.video)))
     // what you can see first, then the cards just below, then the rest: previews seem to be there already as you scroll
     .map((r, i) => [r, onScreenRank(r.id, i)]).sort((a, b) => a[1] - b[1]).map(x => x[0])
     .filter(r => r.source !== 'instagram' || document.visibilityState === 'visible') // Instagram only while you're looking (fewer automatic requests on your account)
